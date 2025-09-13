@@ -1,0 +1,43 @@
+[project]
+name = "ngs-containers"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [{ name = "Mike Hamilton", email = "mike.hamilton7@gmail.com" }]
+requires-python = ">=3.12"
+dependencies = [
+    "cyvcf2>=0.31.1",
+    "matplotlib>=3.10.6",
+    "numpy>=2.3.3",
+    "polars>=1.33.1",
+    "pysam>=0.23.3",
+    "seaborn>=0.13.2",
+    "typer>=0.17.4",
+]
+
+[project.optional-dependencies]
+ml = ["scikit-learn>=1.7.2"]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.18.1",
+    "pytest>=8.4.2",
+    "pytest-cov>=7.0.0",
+    "pytest-sugar>=1.1.1",
+    "ruff>=0.13.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
