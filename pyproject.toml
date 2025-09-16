@@ -1,7 +1,9 @@
+# pyproject.toml
+
 [project]
-name = "ngs-containers"
+name = "ngs-core"
 version = "0.1.0"
-description = "Add your description here"
+description = "NGS analysis pipeline"
 readme = "README.md"
 authors = [{ name = "Mike Hamilton", email = "mike.hamilton7@gmail.com" }]
 requires-python = ">=3.12"

@@ -453,7 +453,7 @@ wheels = [
 ]
 
 [[package]]
-name = "ngs-containers"
+name = "ngs-core"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
