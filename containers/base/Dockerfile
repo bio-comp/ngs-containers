@@ -10,7 +10,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # minimal OS deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    bzip2 ca-certificates curl git procps tzdata tini \
+    bzip2 ca-certificates curl git pigz procps tzdata tini \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Mambaforge (multi-arch)
