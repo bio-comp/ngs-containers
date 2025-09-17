@@ -5,3 +5,4 @@ channels:
   - conda-forge
 dependencies:
   - cutadapt=5.1
+  - xopen<2.0
