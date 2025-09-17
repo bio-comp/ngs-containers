@@ -4,9 +4,11 @@ ARG BASE_IMAGE=ghcr.io/bio-comp/ngs-base:latest
 FROM ${BASE_IMAGE}
 SHELL ["/bin/bash","-lc"]
 
-# Update the base-env created in the base image
-COPY containers/cutadapt/environment.yaml /tmp/environment.yaml
-RUN mamba env update -n base-env -f /tmp/environment.yaml && conda clean -afy
 
-# Sanity check
+
+# Install cutadapt directly
+RUN mamba install -y -n base-env -c conda-forge -c bioconda \
+    "cutadapt==5.1" "xopen<2.0" \
+    && conda clean -afy
+
 RUN cutadapt --version
