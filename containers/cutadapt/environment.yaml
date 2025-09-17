@@ -1,0 +1,7 @@
+# containers/cutadapt/environment.yaml
+name: base-env
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - cutadapt=5.1
