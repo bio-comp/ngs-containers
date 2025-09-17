@@ -107,8 +107,10 @@ jobs:
       - name: Install Nextflow
         run: curl -s https://get.nextflow.io | bash && sudo mv nextflow /usr/local/bin/
 
-      - name: Set up Buildx (amd64 only for smoke)
+      - name: Set up Buildx (docker driver for local FROM)
         uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
 
       - name: Build base (local, no push)
         uses: docker/build-push-action@v6
