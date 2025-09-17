@@ -4,7 +4,7 @@ name: Build & Push Containers
 on:
   push:
     branches: [ main ]
-    tags: [ 'v*' ]     # push versioned tags
+    tags: [ 'v*' ]
   pull_request:
 
 permissions:
@@ -13,19 +13,16 @@ permissions:
   id-token: write
 
 jobs:
-  build-and-push:
+  build-and-push-base:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        image:
-          - name: ngs-base
-            file: containers/base/Dockerfile
-            tag: latest
-          - name: cutadapt
-            file: containers/cutadapt/Dockerfile
-            tag: "5.1"
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -34,18 +31,109 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build & Push ${{ matrix.image.name }}
+      - name: Build & Push ngs-base
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ${{ matrix.image.file }}
+          file: containers/base/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           platforms: linux/amd64,linux/arm64
           tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ matrix.image.name }}:${{ matrix.image.tag }}
-            ghcr.io/${{ github.repository_owner }}/${{ matrix.image.name }}:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/ngs-base:latest
+            ghcr.io/${{ github.repository_owner }}/ngs-base:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          provenance: true
+
+  build-and-push-cutadapt:
+    needs: build-and-push-base
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract cutadapt version from YAML
+        id: v
+        run: |
+          echo "ver=$(grep -Eo 'cutadapt=([0-9]+\.[0-9]+(\.[0-9]+)?)' containers/cutadapt/environment.yaml | cut -d= -f2)" >> $GITHUB_OUTPUT
+
+      - name: Build & Push cutadapt
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: containers/cutadapt/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            BASE_IMAGE=ghcr.io/${{ github.repository_owner }}/ngs-base:latest
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/cutadapt:${{ steps.v.outputs.ver }}
+            ghcr.io/${{ github.repository_owner }}/cutadapt:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+
+  smoke:
+    needs: build-and-push-base
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java (Nextflow)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install Nextflow
+        run: curl -s https://get.nextflow.io | bash && sudo mv nextflow /usr/local/bin/
+
+      - name: Set up Buildx (amd64 only for smoke)
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build base (local, no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: containers/base/Dockerfile
+          push: false
+          load: true
+          platforms: linux/amd64
+          tags: ghcr.io/${{ github.repository_owner }}/ngs-base:ci
+
+      - name: Build cutadapt (local, no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: containers/cutadapt/Dockerfile
+          push: false
+          load: true
+          platforms: linux/amd64
+          build-args: |
+            BASE_IMAGE=ghcr.io/${{ github.repository_owner }}/ngs-base:ci
+          tags: ghcr.io/${{ github.repository_owner }}/cutadapt:ci
+
+      - name: Run Nextflow smoke
+        env:
+          NXF_ANSI_LOG: 'false'
+        run: |
+          mkdir -p data results
+          printf "@x\nACGTACGTACGT\n+\nIIIIIIIIIIII\n" | gzip -c > data/sample.fastq.gz
+          nextflow run workflows/main.nf -profile docker \
+            --paired false \
+            --input "data/*.fastq.gz" \
+            --repo_owner "${{ github.repository_owner }}" \
+            --cutadapt_tag "ci"
+          test -f results/sample.trimmed.fastq.gz

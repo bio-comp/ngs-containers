@@ -1,3 +1,4 @@
+// workflows/main.nf
 nextflow.enable.dsl = 2
 
 // ---- params ----
@@ -28,11 +29,15 @@ process TRIM_SE {
 
     script:
     """
-  cutadapt \
-    -a ${params.adapter_r1} \
-    -q 20 -m 20 \
-    -o ${sample_id}.trimmed.fastq.gz \
-    ${r1}
+    ngs-core-wrap \
+        --task-id ${task.hash} \
+        --process-name ${task.process} \
+        -- \
+        cutadapt \
+            -a ${params.adapter_r1} \
+            -q 20 -m 20 \
+            -o ${sample_id}.trimmed.fastq.gz \
+            ${r1}
   """
 }
 
@@ -52,13 +57,17 @@ process TRIM_PE {
 
     script:
     """
-  cutadapt \
-    -a ${params.adapter_r1} \
-    -A ${params.adapter_r2} \
-    -q 20,20 -m 20 \
-    -o ${sample_id}_R1.trimmed.fastq.gz \
-    -p ${sample_id}_R2.trimmed.fastq.gz \
-    ${r1} ${r2}
+    ngs-core-wrap \
+        --task-id ${task.hash} \
+        --process-name ${task.process} \
+        -- \
+        cutadapt \
+            -a ${params.adapter_r1} \
+            -A ${params.adapter_r2} \
+            -q 20,20 -m 20 \
+            -o ${sample_id}_R1.trimmed.fastq.gz \
+            -p ${sample_id}_R2.trimmed.fastq.gz \
+            ${r1} ${r2}
   """
 }
 
@@ -69,7 +78,9 @@ workflow {
             .map { id, pair -> tuple(id, pair[0], pair[1]) }
             .set { ch_pe }
 
-        trimmed_pe = TRIM_PE(ch_pe)
+        trimmed_pe = TRIM_PE(
+            ch_pe
+        )
         trimmed_pe.view { id, r1, r2 -> "TRIMMED-PE: ${id} -> ${r1.name}, ${r2.name}" }
     }
     else {
