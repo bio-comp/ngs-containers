@@ -12,8 +12,13 @@ permissions:
   packages: write
   id-token: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-push-base:
+    timeout-minutes: 45
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -46,7 +51,8 @@ jobs:
           provenance: true
 
   build-and-push-cutadapt:
-    needs: build-and-push-base
+    timeout-minutes: 45
+    needs: [build-and-push-base, smoke]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -86,6 +92,7 @@ jobs:
           provenance: true
 
   smoke:
+    timeout-minutes: 20
     needs: build-and-push-base
     runs-on: ubuntu-latest
     steps:
@@ -137,3 +144,12 @@ jobs:
             --repo_owner "${{ github.repository_owner }}" \
             --cutadapt_tag "ci"
           test -f results/sample.trimmed.fastq.gz
+
+      - name: Upload smoke artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-results
+          path: |
+            results/**
+            .nextflow.log

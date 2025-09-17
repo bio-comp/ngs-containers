@@ -1,0 +1,10 @@
+.git
+work
+results
+.nextflow*
+__pycache__/
+*.pyc
+.env
+.mypy_cache/
+.nextflow.log
+.lsp
