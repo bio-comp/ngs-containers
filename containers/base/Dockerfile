@@ -45,9 +45,20 @@ ENV PATH=/opt/conda/envs/${CONDA_ENV_NAME}/bin:/opt/conda/bin:$PATH
 
 # ---- Install Python package into the env ----
 WORKDIR /app
+
+# Copy metadata first
 COPY pyproject.toml ./
+COPY README.md LICENSE* ./
+
+# Copy the package
 COPY ngs_core ./ngs_core/
-RUN python -m pip install --no-cache-dir .
+
+# Debug
+RUN python -V && python -m pip --version && ls -al && find ngs_core -maxdepth 2 -type f -print
+
+# Install with verbose logs and without build isolation
+# (so it uses the conda env you just created)
+RUN python -m pip install -vv --no-build-isolation --no-cache-dir .
 
 # Default logging mode
 ENV LOG_FORMAT=json
